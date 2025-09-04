@@ -1,3 +1,5 @@
+import os
+import subprocess
 import threading
 import time
 import queue
@@ -7,6 +9,7 @@ import requests
 import logging
 import config
 import utils
+from config import PRINTER
 
 # 日志配置
 logging.basicConfig(
@@ -54,6 +57,13 @@ status = {
     2:"普通",
     3:"一血",
     5:"已发"
+}
+
+#打印用状态映射
+paint_status = {
+    2:"Accepted",
+    3:"First to solve",
+    5:"Sent"
 }
 
 def get_balloon_task_list():
@@ -126,7 +136,42 @@ def print_task(task):
         "打印小票 | 队伍ID: %s | 题号: %s | 房间: %s | 时间: %s |状态: %s",
         task['team_id'], problem_letter, task['room'], task['ac_time'], status[task['pst']],
     )
-    #TODO:打印机接口
+
+    paint_text = f"""
+    #set page(
+        width: 48mm,
+        height: auto
+    )
+
+    #text(12pt)[
+        #align(center)[
+            = {problem_letter}
+        ]
+    ]
+
+    #grid(
+        columns: (1fr, 2fr),
+        row-gutter: 5pt,
+        align(left)[*Team:*], align(right)[{task['team_id']}],
+        align(left)[*ACTime:*], align(right)[{task['ac_time']}],
+        align(left)[*Room:*], align(right)[{task['room']}],
+        align(left)[*Status:*], align(right)[{paint_status[task['pst']]}],
+    )
+    """
+
+    tickets_dir = "./tickets"
+    os.makedirs(tickets_dir, exist_ok=True)
+
+    typst_input = f'ticket-{task['team_id']}-{problem_letter}.typ'
+    typst_input_path = os.path.join(tickets_dir, typst_input)
+    typst_output_path = typst_input_path.replace('.typ', '.pdf')
+
+    with open(typst_input_path, 'w', encoding='utf-8') as f:
+        f.write(paint_text)
+
+    subprocess.run(['typst', 'compile', typst_input_path, typst_output_path], check=True)
+
+    subprocess.run(['PDFtoPrinter.exe', typst_output_path], check=True)
 
 def getter():
     logger.info("Getter启动")

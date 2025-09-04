@@ -11,3 +11,5 @@ TeamID:str = "balA0"
 Password:str = "EZCRS6DP"
 
 ROOM:str = "A"
+
+PRINTER:str = "DL-5801P"
